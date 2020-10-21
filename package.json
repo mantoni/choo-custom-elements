@@ -1,0 +1,19 @@
+{
+  "name": "choo-custom-elements",
+  "version": "0.0.0",
+  "description": "Choo custom elements experiment",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server .",
+    "bundle": "browserify --debug . > bundle.js"
+  },
+  "author": "Maximilian Antoni",
+  "license": "ISC",
+  "dependencies": {
+    "choo": "^7.1.0"
+  },
+  "devDependencies": {
+    "browserify": "^17.0.0",
+    "http-server": "^0.12.3"
+  }
+}
