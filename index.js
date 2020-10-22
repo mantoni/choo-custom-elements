@@ -21,13 +21,18 @@ customElements.define('my-heading', class extends HTMLElement {
 
 
 /*
- * This element is re-created and dom-diffed on every render cycle.
+ * This element is connected once and the content is updated on every render
+ * cycle.
  */
 customElements.define('my-section', class extends HTMLElement {
 
+  connectedCallback() {
+    console.log('section connected (only once)');
+  }
+
   // Attributes starting with "on" are property assignments in nanohtml:
   set onrender(thing) {
-    console.log('section render (on every render)');
+    console.log('section render');
 
     const text = this.getAttribute('text');
     this.appendChild(html`<section><p>${text}</p></section>`);
@@ -36,7 +41,7 @@ customElements.define('my-section', class extends HTMLElement {
 
 
 /*
- * This element is created once and includes static content.
+ * This element is connected once and includes static content.
  */
 customElements.define('my-button', class extends HTMLElement {
 
@@ -45,57 +50,55 @@ customElements.define('my-button', class extends HTMLElement {
   }
 
   // We can use this setter to pass state and emit \o/
-  set onrender([state, emit]) {
-    if (!this.emit) {
-      // First call. Child nodes are not available yet.
-      this.emit = emit;
-    } else {
-      // Only when refreshing.
-      this.render();
-    }
+  set oninit([state, emit]) {
+    this.emit = emit;
+    // Child nodes are not available yet.
   }
 
   connectedCallback() {
     console.log('button connected (only once)');
 
     // Move the child nodes into a fragment:
-    this.fragment = document.createDocumentFragment();
+    const fragment = document.createDocumentFragment();
     Array.prototype.forEach.call(this.childNodes,
-      (child) => this.fragment.appendChild(child));
+      (child) => fragment.appendChild(child));
 
-    // Initial render:
-    this.render();
-  }
-
-  render() {
     this.appendChild(html`
       <button onclick=${() => this.emit('increment')}>
-        ${this.fragment}
+        ${fragment}
       </button>
     `);
   }
 });
 
+class ElementWithContent extends HTMLElement {
+  appendChild(node) {
+    if (!this.content) {
+      HTMLElement.prototype.appendChild.call(this,
+        this.renderTemplate());
+      this.content = this.querySelector('.content');
+    }
+    this.content.appendChild(node);
+  }
+
+  removeChild(node) {
+    this.content.removeChild(node);
+  }
+}
 
 /*
- * This element is re-created and dom-diffed on every render cycle and includes
- * content that can change.
+ * This element is dom-diffed on every render cycle and includes content that
+ * can change.
  */
-customElements.define('my-state', class extends HTMLElement {
+customElements.define('my-state', class extends ElementWithContent {
 
   connectedCallback() {
     console.log('state connected (only once)');
   }
 
-  appendChild(node) {
-    HTMLElement.prototype.appendChild.call(this, html`
-      <pre>
-        ${node}
-      </pre>
-    `);
+  renderTemplate() {
+    return html`<pre class="content"></pre>`;
   }
-
-  removeChild() {}
 });
 
 
@@ -113,10 +116,10 @@ function myView(state, emit) {
       <my-heading></my-heading>
       <hr>
       <my-section text="Clicks: ${state.clicks}" onrender=1></my-section>
-      <my-button onrender=${[state, emit]}>Click me!</my-button>
       <my-state>
-        ${JSON.stringify({ clicks: state.clicks }, null, '  ')}
+${JSON.stringify(state, null, '  ')}
       </my-state>
+      <my-button oninit=${[state, emit]}>Click me!</my-button>
     </body>
   `;
 }
